@@ -1,0 +1,15 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-I./include",
+      "-c",
+      "-o",
+      "obj/main.o",
+      "src/main.c"
+    ],
+    "directory": "/home/zayac/hdd/src/c/json",
+    "file": "/home/zayac/hdd/src/c/json/src/main.c",
+    "output": "/home/zayac/hdd/src/c/json/obj/main.o"
+  }
+]
