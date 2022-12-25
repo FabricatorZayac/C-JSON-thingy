@@ -8,49 +8,26 @@
 #include "file_ops.h"
 #include "serializeable.h"
 
-/* typedef struct ExampleStruct ExampleStruct; */
+typedef struct ExampleStruct ExampleStruct;
+typedef struct NestedStruct NestedStruct;
+typedef struct Nestle Nestle;
 
-DEFINE_STRUCT(ExampleStruct, 3);
-DEFINE_STRUCT(NestedStruct, 3);
-DEFINE_STRUCT(Nestle, 2);
+DEFINE_STRUCT(ExampleStruct, char *name, NestedStruct *nest, int value)
+    FIELD_STR("name", name);
+    FIELD_SERIALIZEABLE("nest", nest);
+    FIELD_INT("value", value);
+STRUCT_END
 
-CONSTRUCTOR_BEGIN(ExampleStruct, char *name, NestedStruct *nest, int value)
-    NEW_FIELD_STR(0, "name", name);
-    NEW_FIELD_SERIALIZEABLE(1, "nest", nest);
-    NEW_FIELD_INT(2, "value", value);
-CONSTRUCTOR_END
+DEFINE_STRUCT(NestedStruct, int a, Nestle *b, int c)
+    FIELD_INT("a", a);
+    FIELD_SERIALIZEABLE("b", b);
+    FIELD_INT("c", c);
+STRUCT_END
 
-/* ExampleStruct *ExampleStruct_create(char *name, NestedStruct *nest, int value) { */
-/*     ExampleStruct *self = malloc(sizeof (ExampleStruct)); */
-/*     self->size = 3; */
-
-/*     NEW_FIELD_STR(0, "name", name); */
-/*     NEW_FIELD_SERIALIZEABLE(1, "nest", nest); */
-/*     NEW_FIELD_INT(2, "value", value); */
-
-/*     return self; */
-/* } */
-
-NestedStruct *NestedStruct_create(int a, Nestle *b, int c) {
-    NestedStruct *self = malloc(sizeof (NestedStruct));
-    self->size = 3;
-
-    NEW_FIELD_INT(0, "a", a);
-    NEW_FIELD_SERIALIZEABLE(1, "b", b);
-    NEW_FIELD_INT(2, "c", c);
-
-    return self;
-}
-
-Nestle *Nestle_create(int a, char *b) {
-    Nestle *self = malloc(sizeof (Nestle));
-    self->size = 2;
-
-    NEW_FIELD_INT(0, "a", a);
-    NEW_FIELD_STR(1, "b", b);
-
-    return self;
-}
+DEFINE_STRUCT(Nestle, int a, char *b)
+    FIELD_INT("a", a);
+    FIELD_STR("b", b);
+STRUCT_END
 
 void remove_spaces(char* s) {
     char* d = s;

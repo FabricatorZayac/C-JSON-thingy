@@ -16,20 +16,23 @@ Field *Field_create(char *key, enum FieldType value_type, void *value);
 void Field_destroy(Field *field);
 
 // To be used to initialize fields in serializeable struct constructor
-#define NEW_FIELD_INT(fieldnum, name, value) {\
-    int *buffer_##fieldnum = malloc(sizeof (int));\
-    *buffer_##fieldnum = value;\
-    self->fields[fieldnum] = Field_create(name, FieldType_Integer, buffer_##fieldnum);\
+#define FIELD_INT(name, value) {\
+    int *buffer_##__LINE__ = malloc(sizeof (int));\
+    *buffer_##__LINE__ = value;\
+    self->fields[i] = Field_create(name, FieldType_Integer, buffer_##__LINE__);\
+    i++;\
 }
 
-#define NEW_FIELD_STR(fieldnum, name, value) {\
-    char *buffer_##fieldnum = malloc(128);\
-    strcpy(buffer_##fieldnum, value);\
-    self->fields[fieldnum] = Field_create(name, FieldType_String, buffer_##fieldnum);\
+#define FIELD_STR(name, value) {\
+    char *buffer_##__LINE__ = malloc(128);\
+    strcpy(buffer_##__LINE__, value);\
+    self->fields[i] = Field_create(name, FieldType_String, buffer_##__LINE__);\
+    i++;\
 }
 
-#define NEW_FIELD_SERIALIZEABLE(fieldnum, name, value) {\
-    self->fields[fieldnum] = Field_create(name, FieldType_Serializeable, value);\
+#define FIELD_SERIALIZEABLE(name, value) {\
+    self->fields[i] = Field_create(name, FieldType_Serializeable, value);\
+    i++;\
 }
 
 #endif // SERIALIZE_H_
