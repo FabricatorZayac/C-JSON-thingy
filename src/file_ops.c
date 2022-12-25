@@ -1,4 +1,6 @@
 #include "file_ops.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 void write_to_file(char *filename, char *string) {
     FILE *outfile = fopen(filename, "w");
@@ -7,10 +9,15 @@ void write_to_file(char *filename, char *string) {
 }
 
 char *read_from_file(char *filename) {
-    char *buffer = malloc(256);
     FILE *infile = fopen(filename, "r");
-    fscanf(infile, "%s", buffer);
-    fclose(infile);
 
+    fseek(infile, 0, SEEK_END);
+    size_t size = ftell(infile);
+    rewind(infile);
+    char *buffer = malloc(size + 1);
+    fread(buffer, size, 1, infile);
+    buffer[size] = '\0';
+
+    fclose(infile);
     return buffer;
 }

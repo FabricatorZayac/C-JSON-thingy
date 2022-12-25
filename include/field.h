@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum FieldType { FieldType_String, FieldType_Integer };
+enum FieldType { FieldType_String, FieldType_Integer, FieldType_Serializeable };
 
 typedef struct Field {
     char *key;
@@ -14,5 +14,22 @@ typedef struct Field {
 
 Field *Field_create(char *key, enum FieldType value_type, void *value);
 void Field_destroy(Field *field);
+
+// To be used to initialize fields in serializeable struct constructor
+#define new_field_int(fieldnum, name, value) {\
+    int *buffer_##fieldnum = malloc(sizeof (int));\
+    *buffer_##fieldnum = value;\
+    self->fields[fieldnum] = Field_create(name, FieldType_Integer, buffer_##fieldnum);\
+}
+
+#define new_field_str(fieldnum, name, value) {\
+    char *buffer_##fieldnum = malloc(128);\
+    strcpy(buffer_##fieldnum, value);\
+    self->fields[fieldnum] = Field_create(name, FieldType_String, buffer_##fieldnum);\
+}
+
+#define new_field_serializeable(fieldnum, name, value) {\
+    self->fields[fieldnum] = Field_create(name, FieldType_Serializeable, value);\
+}
 
 #endif // SERIALIZE_H_
