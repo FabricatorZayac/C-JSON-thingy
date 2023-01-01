@@ -1,32 +1,27 @@
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 
-#include "field.h"
 #include "file_ops.h"
-#include "serializeable.h"
+#include "serializable.h"
 
 typedef struct ExampleStruct ExampleStruct;
 typedef struct NestedStruct NestedStruct;
 typedef struct Nestle Nestle;
 
 DEFINE_STRUCT(ExampleStruct, char *name, NestedStruct *nest, int value)
-    FIELD_STR("name", name);
-    FIELD_SERIALIZEABLE("nest", nest);
-    FIELD_INT("value", value);
+    FIELD_STR(name);
+    FIELD_SERIALIZEABLE(nest);
+    FIELD_INT(value);
 STRUCT_END
 
 DEFINE_STRUCT(NestedStruct, int a, Nestle *b, int c)
-    FIELD_INT("a", a);
-    FIELD_SERIALIZEABLE("b", b);
-    FIELD_INT("c", c);
+    FIELD_INT(a);
+    FIELD_SERIALIZEABLE(b);
+    FIELD_INT(c);
 STRUCT_END
 
 DEFINE_STRUCT(Nestle, int a, char *b)
-    FIELD_INT("a", a);
-    FIELD_STR("b", b);
+    FIELD_INT(a);
+    FIELD_STR(b);
 STRUCT_END
 
 void remove_spaces(char* s) {
@@ -36,17 +31,17 @@ void remove_spaces(char* s) {
     while ((*s++ = *d++));
 }
 
-void tokenize_json(char *json) {
-    printf("%s\n", json);
-    remove_spaces(json);
-    printf("%s\n", json);
-}
-
 int main() {
-    ExampleStruct *test = ExampleStruct_create("test1", NestedStruct_create(2, Nestle_create(7, "nestle"), 4), 5);
-    write_to_file("test.json", Serializeable_to_JSON((Serializeable *)test));
-    Serializeable_destroy((Serializeable *)test);
+    Nestle nestle = Nestle_create(/*a: */7,
+                                  /*b: */"nestle");
 
-    tokenize_json(read_from_file("test.json"));
-    /* tokenize_json(read_from_file("data.json")); */
+    NestedStruct nest = NestedStruct_create(/*a: */2,
+                                            /*b: */&nestle,
+                                            /*c: */4);
+
+    ExampleStruct test = ExampleStruct_create(/* name: */"test1",
+                                              /* nest: */&nest,
+                                              /*value: */5);
+
+    write_to_file("test.json", Serializeable_to_JSON(&test));
 }
