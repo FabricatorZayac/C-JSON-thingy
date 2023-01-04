@@ -1,56 +1,70 @@
 #include "serializable.h"
-#include "field.h"
 #include <stddef.h>
-#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
-struct Serializable {
+struct SerializableObject {
     size_t size;
     Field fields[];
 };
 
-Value get_value(Serializable *self, char *key) {
+Value get_value(SerializableObject *self, char *key) {
     Field buffer = self->fields[0];
-    for (int i = 0; self->size; buffer = self->fields[++i]) if (!strcmp(buffer.key, key)) return buffer.value;
+    for (int i = 0; self->size; buffer = self->fields[++i])
+        if (!strcmp(buffer.key, key)) return buffer.value.value;
 
     // TODO error handling
     exit(EXIT_FAILURE);
 }
 
-char *Serializeable_to_JSON(Serializable *self) {
-    // TODO automatic result size thingy
-    // in this case 256 is the max length of JSON string
-    char *result = (char *)malloc(256);
+char *SerializeableValue_to_JSON(SerializableValue *self) {
+    char *result = calloc(1, BUFSIZ);
+    switch (self->value_type) {
+    case ValueType_Bool:
+        result = self->value.boolean ?
+            strncpy(result, "true", 4) :
+            strncpy(result, "false", 5);
+        break;
+    case ValueType_Integer:
+        sprintf(result, "%d", self->value.integer);
+        break;
+    case ValueType_String:
+        sprintf(result, "\"%s\"", self->value.string);
+        break;
+    case ValueType_Array:
+        sprintf(result, "%c", '[');
+        for (size_t i = 0; i < self->value.array->size; i++) {
+            sprintf(result + strlen(result), "%s, ",
+                    SerializeableValue_to_JSON(&self->value.array->array[i]));
+        }
+        sprintf(result + strlen(result) - 2, "%c", ']');
+        break;
+    case ValueType_Object: {
+            char *intermediate = SerializeableObject_to_JSON(self->value.object);
+            strncpy(result + strlen(result), intermediate, strlen(intermediate));
+            free(intermediate);
+        }
+        break;
+    default:
+        printf("in Value_to_JSON Unimplemented Type %d", self->value_type);
+        break;
+    }
+    return result;
+}
+
+char *SerializeableObject_to_JSON(SerializableObject *self) {
+    char *result = calloc(1, BUFSIZ);
 
     sprintf(result, "{");
     Field buffer = self->fields[0];
     for (int i = 0; i < self->size; buffer = self->fields[++i]) {
-        switch (buffer.value_type) {
-        case ValueType_String:
-            sprintf(result + strlen(result), "\"%s\": \"%s\"",
-                    buffer.key,
-                    get_value(self, buffer.key).string);
-            break;
-        case ValueType_Integer:
-            sprintf(result + strlen(result), "\"%s\": %d",
-                    buffer.key,
-                    get_value(self, buffer.key).integer);
-            break;
-        case ValueType_Serializable:
-            sprintf(result + strlen(result), "\"%s\": %s",
-                    buffer.key,
-                    Serializeable_to_JSON(get_value(self, buffer.key).object));
-            break;
-        /* case FieldType_Array: */
-        /*     sprintf(result + strlen(result), "\"%s\": %s", */
-        /*             self->fields[i]->key); */
-        /*     break; */
-        default:
-            puts("Unimplemented Type");
-            break;
-        }
-        if (i != self->size - 1) sprintf(result + strlen(result), ", ");
+        char *intermediate = SerializeableValue_to_JSON(&buffer.value);
+        sprintf(result + strlen(result), "\"%s\": %s, ",
+                buffer.key,
+                intermediate);
+        free(intermediate);
     }
-    sprintf(result + strlen(result), "}");
+    sprintf(result + strlen(result) - 2, "}");
 
     return result;
 }
