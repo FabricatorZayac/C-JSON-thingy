@@ -1,0 +1,3 @@
+[submodule "include/scfl"]
+	path = include/scfl
+	url = git@github.com:Zayac-The-Engineer/scfl.git
