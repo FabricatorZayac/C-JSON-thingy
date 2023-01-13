@@ -3,11 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-struct SerializableObject {
-    size_t size;
-    Field fields[];
-};
-
 Value get_value(SerializableObject *self, char *key) {
     Field buffer = self->fields[0];
     for (int i = 0; self->size; buffer = self->fields[++i])
@@ -17,7 +12,7 @@ Value get_value(SerializableObject *self, char *key) {
     exit(EXIT_FAILURE);
 }
 
-char *SerializeableValue_to_JSON(SerializableValue *self) {
+char *SerializableValue_to_JSON(SerializableValue *self) {
     char *result = calloc(1, BUFSIZ);
     switch (self->value_type) {
     case ValueType_Bool:
@@ -35,12 +30,12 @@ char *SerializeableValue_to_JSON(SerializableValue *self) {
         sprintf(result, "%c", '[');
         for (size_t i = 0; i < self->value.array->size; i++) {
             sprintf(result + strlen(result), "%s, ",
-                    SerializeableValue_to_JSON(&self->value.array->array[i]));
+                    SerializableValue_to_JSON(&self->value.array->array[i]));
         }
         sprintf(result + strlen(result) - 2, "%c", ']');
         break;
     case ValueType_Object: {
-            char *intermediate = SerializeableObject_to_JSON(self->value.object);
+            char *intermediate = SerializableObject_to_JSON(self->value.object);
             strncpy(result + strlen(result), intermediate, strlen(intermediate));
             free(intermediate);
         }
@@ -52,13 +47,13 @@ char *SerializeableValue_to_JSON(SerializableValue *self) {
     return result;
 }
 
-char *SerializeableObject_to_JSON(SerializableObject *self) {
+char *SerializableObject_to_JSON(SerializableObject *self) {
     char *result = calloc(1, BUFSIZ);
 
     sprintf(result, "{");
     Field buffer = self->fields[0];
     for (int i = 0; i < self->size; buffer = self->fields[++i]) {
-        char *intermediate = SerializeableValue_to_JSON(&buffer.value);
+        char *intermediate = SerializableValue_to_JSON(&buffer.value);
         sprintf(result + strlen(result), "\"%s\": %s, ",
                 buffer.key,
                 intermediate);

@@ -1,5 +1,8 @@
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "parser.h"
 #include "file_ops.h"
 #include "serializable.h"
 
@@ -21,12 +24,9 @@ DEFINE_STRUCT(ExampleStruct, char *name, NestedStruct *nest, int value)
     FIELD_INT(value);
 STRUCT_END
 
-void remove_spaces(char* s) {
-    char* d = s;
-    do
-        while (isspace(*d)) ++d;
-    while ((*s++ = *d++));
-}
+DEFINE_STRUCT(TestForTheParserLol, char *asd)
+    FIELD_STR(asd);
+STRUCT_END
 
 int main() {
     SerializableArray array = {.size = 2,
@@ -43,9 +43,20 @@ int main() {
                                             /*b: */&nestle,
                                             /*c: */4);
 
-    ExampleStruct test = ExampleStruct_create(/* name: */"test1",
+    ExampleStruct example = ExampleStruct_create(/* name: */"test1",
                                               /* nest: */&nest,
                                               /*value: */5);
 
-    write_to_file("test.json", SerializeableObject_to_JSON(&test));
+    write_to_file("test.json", SerializableObject_to_JSON(&example));
+
+    /* char *json = read_from_file("test.json"); */
+    /* SerializableValue value = JSON_to_SerializeableValue(json); */
+    /* printf("%s\n", SerializeableValue_to_JSON(value)); */
+
+    /* TestForTheParserLol test = TestForTheParserLol_create("qwerty"); */
+    /* printf("%s\n", SerializeableObject_to_JSON(&test)); */
+    /* SerializableValue *value = JSON_to_SerializeableValue(SerializeableObject_to_JSON(&test)); */
+    /* SerializableValue *value = JSON_to_SerializableValue("asdf"); */
+
+    return EXIT_SUCCESS;
 }

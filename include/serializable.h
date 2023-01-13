@@ -46,9 +46,14 @@ struct SerializableArray {
     SerializableValue *array;
 };
 
+struct SerializableObject {
+    size_t size;
+    Field fields[];
+};
+
 /* Value get_value(SerializableObject *self, char *key); */
-char *SerializeableValue_to_JSON(SerializableValue *self);
-char *SerializeableObject_to_JSON(SerializableObject *self);
+char *SerializableValue_to_JSON(SerializableValue *self);
+char *SerializableObject_to_JSON(SerializableObject *self);
 void Serializeable_destroy(SerializableObject *self);
 SerializableObject *Serializeable_from_JSON(char *json_string);
 
