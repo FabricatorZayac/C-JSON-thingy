@@ -55,10 +55,13 @@ void Value_state(char c) {
     case '"':
         parser.state = Parser_String;
         break;
+    case 't':
+    case 'f':
+        parser.state = Parser_Bool;
+        break;
     default:
         if (isdigit(c) || c == '-') {
             parser.state = Parser_Integer;
-            /* Integer_state(c); */
         }
         break;
     }
@@ -97,10 +100,6 @@ void String_state(char c) {
     } else {
         parser.buffer[parser.buffer_size++] = c;
     }
-}
-
-void Bool_state(char c) {
-    // TODO
 }
 
 void Boundary_state(char c) {
@@ -184,7 +183,8 @@ SerializableValue *JSON_to_SerializableValue(char *json) {
         switch (parser.state) {
         case Parser_Value:
             Value_state(json[i]);
-            if (parser.state == Parser_Integer) i--;
+            if (parser.state == Parser_Integer || parser.state == Parser_Bool)
+                i--;
             break;
         case Parser_String:
             String_state(json[i]);
@@ -208,7 +208,18 @@ SerializableValue *JSON_to_SerializableValue(char *json) {
             parser.state = Parser_Boundary;
             break;
         case Parser_Bool:
-            Bool_state(json[i]);
+            if (strstr(json + i, "true") == json + i) {
+                parser.tokens[parser.tokens_size++] = (ParserToken){
+                    .token_type = Token_Value,
+                    .token.value = (SerializableValue){
+                        .value_type = ValueType_Bool, .value.boolean = true}};
+            } else if (strstr(json + i, "false") == json + i) {
+                parser.tokens[parser.tokens_size++] = (ParserToken){
+                    .token_type = Token_Value,
+                    .token.value = (SerializableValue){
+                        .value_type = ValueType_Bool, .value.boolean = false}};
+            }
+            parser.state = Parser_Boundary;
             break;
         case Parser_Keyseeker:
             if (json[i] == '"') parser.state = Parser_Key;

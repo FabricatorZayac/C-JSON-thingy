@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,11 @@ DEFINE_STRUCT(TestStructString, char *a, char *b)
     FIELD_STR(b);
 STRUCT_END
 
+DEFINE_STRUCT(TestStructBool, bool a, bool b)
+    FIELD_BOOL(a);
+    FIELD_BOOL(b);
+STRUCT_END
+
 int main() {
     SerializableArray array = {.size = 2,
     .array = (SerializableValue[]){
@@ -58,10 +64,10 @@ int main() {
     write_to_file("test.json", SerializableObject_to_JSON(&example));
 
 
-    SerializableArray test = {.size = 3,
+    SerializableArray test = {.size = 6,
     .array = (SerializableValue[]){
-        /* {.value_type = ValueType_Integer, .value.integer = 10}, */
-        /* {.value_type = ValueType_Integer, .value.integer = 4}, */
+        {.value_type = ValueType_Integer, .value.integer = 10},
+        {.value_type = ValueType_Integer, .value.integer = 4},
         {.value_type = ValueType_String, .value.string = "asdf"},
         {.value_type = ValueType_String, .value.string = "qwer"},
         {.value_type = ValueType_String, .value.string = "qwerty"},
@@ -70,14 +76,16 @@ int main() {
 
     TestStructInt test_int = TestStructInt_create(5);
     TestStructString test_str = TestStructString_create("qwerty", "xc");
+    TestStructBool test_bool = TestStructBool_create(true, false);
 
     /* char *stringified = read_from_file("test.json"); */
     /* char *stringified = SerializableValue_to_JSON(&(SerializableValue){.value_type = ValueType_String, .value.string = "asdf"}); */
-    /* char *stringified = SerializableObject_to_JSON(&test_int); */
+    /* char *stringified = SerializableObject_to_JSON(&test_bool); */
     /* char *stringified = SerializableValue_to_JSON(&(SerializableValue){.value_type = ValueType_Integer, .value.integer = 5}); */
     char *stringified = SerializableValue_to_JSON(&(SerializableValue){.value_type = ValueType_Array, .value.array = &test});
-    /* char *stringified = SerializableValue_to_JSON(&(SerializableValue){.value_type = ValueType_Bool, .value.boolean = true}); */
-    /* printf("json: %s\n", stringified); */
+    /* char *stringified = SerializableValue_to_JSON(&(SerializableValue){.value_type = ValueType_Bool, .value.boolean = false}); */
+
+    printf("json: %s\n", stringified);
     SerializableValue *result = JSON_to_SerializableValue(stringified);
 
     printf("%s\n", SerializableValue_to_JSON(result));
