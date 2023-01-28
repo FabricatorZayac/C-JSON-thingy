@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+void Integer_state(char c);
+
 /* It'll be a miracle if this thing works at all */
 
 enum TokenType { Token_Field, Token_Value, Token_Key, Token_Boundary };
@@ -20,7 +22,16 @@ typedef struct {
     Token token;
 } ParserToken;
 
-enum ParserState { Parser_String, Parser_Integer, Parser_Key, Parser_Value, Parser_Separator, Parser_Boundary };
+enum ParserState {
+    Parser_String,
+    Parser_Integer,
+    Parser_Bool,
+    Parser_Key,
+    Parser_Value,
+    Parser_Separator,
+    Parser_Boundary,
+    Parser_Keyseeker /*I really don't like that I have to do this*/
+};
 typedef struct {
     enum ParserState state;
 
@@ -36,24 +47,24 @@ static Parser parser = { .state = Parser_Value, .buffer_size = 0, .tokens_size =
 void Value_state(char c) {
     switch (c) {
     case '{':
-        parser.state = Parser_Key;
+        parser.state = Parser_Keyseeker;
         /* Fallthrough */
     case '[':
-        parser.tokens[parser.tokens_size++].token.boundary = c;
+        parser.tokens[parser.tokens_size++] = (ParserToken) {.token_type = Token_Boundary, .token.boundary = c};
         break;
     case '"':
         parser.state = Parser_String;
         break;
     default:
-        if (isdigit(c) && c == '-') {
+        if (isdigit(c) || c == '-') {
             parser.state = Parser_Integer;
+            /* Integer_state(c); */
         }
         break;
     }
 }
 
 void Key_state(char c) {
-    if (parser.buffer_size == 0 && c == '"') return; /* NOTE HACK bit inelegant. Key state begins with open bracket */
     if (c == '"' && parser.buffer[parser.buffer_size - 1] != '\\') {
         parser.tokens[parser.tokens_size].token_type = Token_Key;
         parser.tokens[parser.tokens_size++].token =
@@ -70,14 +81,13 @@ void Key_state(char c) {
 }
 
 void String_state(char c) {
-    if (parser.buffer_size == 0 && c == '"') return;
     if (c == '"' && parser.buffer[parser.buffer_size - 1] != '\\') {
         parser.tokens[parser.tokens_size].token_type = Token_Value;
         parser.tokens[parser.tokens_size++].token = (Token){
             .value = (SerializableValue){
                 .value_type = ValueType_String,
-                .value.string = strncpy(calloc(1, strlen(parser.buffer)),
-                                        parser.buffer, strlen(parser.buffer))}};
+                .value.string = strncpy(calloc(1, parser.buffer_size + 1),
+                                        parser.buffer, parser.buffer_size)}};
 
         parser.buffer_size = 0;
         memset(parser.buffer, 0, BUFSIZ);
@@ -89,25 +99,8 @@ void String_state(char c) {
     }
 }
 
-/* TODO add branching with floats and exponents */
-void Integer_state(char c) {
-    if (isdigit(c)) {
-        parser.buffer[parser.buffer_size++] = c;
-    } else {
-        parser.tokens[parser.tokens_size].token_type = Token_Value;
-        parser.tokens[parser.tokens_size++].token = (Token){
-            .value = (SerializableValue){.value_type = ValueType_Integer,
-                                         .value.integer = atoi(parser.buffer)}};
-
-        parser.buffer_size = 0;
-        memset(parser.buffer, 0, BUFSIZ);
-
-        parser.state = Parser_Boundary;
-    }
-}
-
-void Separator_state(char c) {
-    parser.state = Parser_Value;
+void Bool_state(char c) {
+    // TODO
 }
 
 void Boundary_state(char c) {
@@ -124,8 +117,9 @@ void Boundary_state(char c) {
     switch (c) {
     case '}': {
             size_t i, object_size = 0;
-            for (i = parser.tokens_size; parser.tokens[i].token.boundary != '{'; i--)
-                if (parser.tokens[i].token_type == Token_Key) object_size++;
+            // Can be made safer by type checking for boundary, but I am tired and don't give a shit
+            for (i = parser.tokens_size - 1; parser.tokens[i].token.boundary != '{'; i--)
+                if (parser.tokens[i].token_type == Token_Field) object_size++;
             size_t object_start = i;
 
             SerializableValue result = (SerializableValue){
@@ -133,9 +127,8 @@ void Boundary_state(char c) {
                 .value.object = calloc(1, sizeof(SerializableObject) + object_size * sizeof(Field))};
             result.value.object->size = object_size;
 
-            for (size_t j = 0; i < parser.tokens_size; i++, j++) {
-                if (parser.tokens[i].token_type == Token_Field)
-                    result.value.object->fields[j] = parser.tokens[i].token.field;
+            for (size_t j = 0; j < object_size; j++, i++) {
+                result.value.object->fields[j] = parser.tokens[i + 1].token.field;
             }
             memset(parser.tokens + object_start, 0, sizeof(ParserToken) * object_size);
             parser.tokens_size = object_start;
@@ -151,15 +144,16 @@ void Boundary_state(char c) {
 
             SerializableValue result = (SerializableValue){
                 .value_type = ValueType_Array,
-                .value.array = calloc(1, sizeof(SerializableObject))};
+                .value.array = calloc(1, sizeof(SerializableArray))};
             result.value.array->size = array_size;
             result.value.array->array = calloc(array_size, sizeof(SerializableValue));
 
             for (size_t j = 0; j < array_size; i++, j++) {
-                if (parser.tokens[i].token_type == Token_Value)
-                    result.value.array->array[j] = (SerializableValue){
-                        .value_type = parser.tokens[i].token.value.value_type,
-                        .value = parser.tokens[i].token.value.value};
+                /* if (parser.tokens[i].token_type == Token_Value) */
+                /*     result.value.array->array[j] = (SerializableValue){ */
+                /*         .value_type = parser.tokens[i].token.value.value_type, */
+                /*         .value = parser.tokens[i].token.value.value}; */
+                result.value.array->array[j] = parser.tokens[i + 1].token.value;
             }
             memset(parser.tokens + array_start, 0, sizeof(ParserToken) * array_size);
             parser.tokens_size = array_start;
@@ -168,40 +162,19 @@ void Boundary_state(char c) {
         }
         break;
     case ',':
-        for (size_t i = parser.tokens_size; i >= 0; i--) {
-            if (parser.tokens[parser.tokens_size - 1].token_type == Token_Boundary) {
+        for (size_t i = parser.tokens_size - 1; i >= 0; i--) {
+            if (parser.tokens[i].token_type == Token_Boundary) {
                 if (parser.tokens[i].token.boundary == '[') {
                     parser.state = Parser_Value;
                     return;
                 } else if (parser.tokens[i].token.boundary == '{') {
-                    parser.state = Parser_Key;
+                    parser.state = Parser_Keyseeker;
                     return;
                 }
             }
         }
         break;
     }
-}
-
-void cleanup() {
-    for (size_t i = 0; i < parser.tokens_size; i++) {
-        switch (parser.tokens[i].token_type) {
-        case Token_Key:
-            free(parser.tokens[i].token.key);
-            break;
-        case Token_Field:
-            free(parser.tokens[i].token.field.key);
-            break;
-        case Token_Value:
-            break;
-        case Token_Boundary:
-            break;
-        }
-
-    }
-    parser = (Parser){ .state = Parser_Value, .buffer_size = 0, .tokens_size = 0 };
-    memset(parser.buffer, 0, BUFSIZ);
-    memset(parser.tokens, 0, BUFSIZ * sizeof(ParserToken));
 }
 
 SerializableValue *JSON_to_SerializableValue(char *json) {
@@ -211,12 +184,13 @@ SerializableValue *JSON_to_SerializableValue(char *json) {
         switch (parser.state) {
         case Parser_Value:
             Value_state(json[i]);
+            if (parser.state == Parser_Integer) i--;
             break;
         case Parser_String:
             String_state(json[i]);
             break;
         case Parser_Separator:
-            Separator_state(json[i]);
+            parser.state = Parser_Value;
             break;
         case Parser_Key:
             Key_state(json[i]);
@@ -225,12 +199,23 @@ SerializableValue *JSON_to_SerializableValue(char *json) {
             Boundary_state(json[i]);
             break;
         case Parser_Integer:
-            Integer_state(json[i]);
+            /* Integer_state(json[i]); */
+            parser.tokens[parser.tokens_size++] =
+                (ParserToken){.token_type = Token_Value,
+                              .token.value = (SerializableValue){
+                                  .value_type = ValueType_Integer,
+                                  .value.integer = atoi(json + i)}};
+            parser.state = Parser_Boundary;
+            break;
+        case Parser_Bool:
+            Bool_state(json[i]);
+            break;
+        case Parser_Keyseeker:
+            if (json[i] == '"') parser.state = Parser_Key;
             break;
         }
     }
 
     result = memcpy(result, &parser.tokens[0].token.value, sizeof(SerializableValue));
-    cleanup();
     return result;
 }
