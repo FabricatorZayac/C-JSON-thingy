@@ -16,7 +16,7 @@ void Integer_state(char c);
 enum TokenType { Token_Field, Token_Value, Token_Key, Token_Boundary };
 typedef union {
     Field field;
-    SerializableValue value;
+    JsonValue value;
     char *key;
     char boundary;
 } Token;
@@ -90,10 +90,9 @@ void String_state(char c) {
     if (c == '"' && parser.buffer[parser.buffer_size - 1] != '\\') {
         parser.tokens[parser.tokens_size].token_type = Token_Value;
         parser.tokens[parser.tokens_size++].token = (Token){
-            .value = (SerializableValue){
-                .value_type = ValueType_String,
-                .value.string = strncpy(calloc(1, parser.buffer_size + 1),
-                                        parser.buffer, parser.buffer_size)}};
+            .value = JsonValue(ValueType_String,
+                               strncpy(calloc(1, parser.buffer_size + 1),
+                                       parser.buffer, parser.buffer_size))};
 
         parser.buffer_size = 0;
         memset(parser.buffer, 0, BUFSIZ);
@@ -124,13 +123,13 @@ void Boundary_state(char c) {
                 if (parser.tokens[i].token_type == Token_Field) object_size++;
             size_t object_start = i;
 
-            SerializableValue result = (SerializableValue){
-                .value_type = ValueType_Object,
-                .value.object = calloc(1, sizeof(SerializableObject) + object_size * sizeof(Field))};
-            result.value.object->size = object_size;
+            JsonValue result = JsonValue(
+                ValueType_Object,
+                calloc(1, sizeof(JsonObject) + object_size * sizeof(Field)));
+            result.body.object->size = object_size;
 
             for (size_t j = 0; j < object_size; j++, i++) {
-                result.value.object->fields[j] = parser.tokens[i + 1].token.field;
+                result.body.object->fields[j] = parser.tokens[i + 1].token.field;
             }
             memset(parser.tokens + object_start, 0, sizeof(ParserToken) * object_size);
             parser.tokens_size = object_start;
@@ -144,14 +143,13 @@ void Boundary_state(char c) {
                 if (parser.tokens[i].token_type == Token_Value) array_size++;
             size_t array_start = i;
 
-            SerializableValue result = (SerializableValue){
-                .value_type = ValueType_Array,
-                .value.array = calloc(1, sizeof(SerializableArray))};
-            result.value.array->size = array_size;
-            result.value.array->array = calloc(array_size, sizeof(SerializableValue));
+            JsonValue result =
+                JsonValue(ValueType_Array, calloc(1, sizeof(JsonArray)));
+            result.body.array->size = array_size;
+            result.body.array->array = calloc(array_size, sizeof(JsonValue));
 
             for (size_t j = 0; j < array_size; i++, j++) {
-                result.value.array->array[j] = parser.tokens[i + 1].token.value;
+                result.body.array->array[j] = parser.tokens[i + 1].token.value;
             }
             memset(parser.tokens + array_start, 0, sizeof(ParserToken) * array_size);
             parser.tokens_size = array_start;
@@ -175,7 +173,7 @@ void Boundary_state(char c) {
     }
 }
 
-SerializableValue JSON_to_SerializableValue(char *json) {
+JsonValue JSON_to_SerializableValue(char *json) {
     for (size_t i = 0; i < strlen(json); i++) {
         switch (parser.state) {
         case Parser_Value:
@@ -197,24 +195,20 @@ SerializableValue JSON_to_SerializableValue(char *json) {
             break;
         case Parser_Integer:
             /* Integer_state(json[i]); */
-            parser.tokens[parser.tokens_size++] =
-                (ParserToken){.token_type = Token_Value,
-                              .token.value = (SerializableValue){
-                                  .value_type = ValueType_Integer,
-                                  .value.integer = atoi(json + i)}};
+            parser.tokens[parser.tokens_size++] = (ParserToken){
+                .token_type = Token_Value,
+                .token.value = JsonValue(ValueType_Integer, atoi(json + i))};
             parser.state = Parser_Boundary;
             break;
         case Parser_Bool:
             if (strstr(json + i, "true") == json + i) {
                 parser.tokens[parser.tokens_size++] = (ParserToken){
                     .token_type = Token_Value,
-                    .token.value = (SerializableValue){
-                        .value_type = ValueType_Bool, .value.boolean = true}};
+                    .token.value = JsonValue(ValueType_Bool, true)};
             } else if (strstr(json + i, "false") == json + i) {
                 parser.tokens[parser.tokens_size++] = (ParserToken){
                     .token_type = Token_Value,
-                    .token.value = (SerializableValue){
-                        .value_type = ValueType_Bool, .value.boolean = false}};
+                    .token.value = JsonValue(ValueType_Bool, false)};
             }
             parser.state = Parser_Boundary;
             break;
@@ -224,7 +218,7 @@ SerializableValue JSON_to_SerializableValue(char *json) {
         }
     }
 
-    SerializableValue result = parser.tokens[0].token.value;
+    JsonValue result = parser.tokens[0].token.value;
     memset(&parser, 0, sizeof(parser));
     parser = (Parser){ .state = Parser_Value, .buffer_size = 0, .tokens_size = 0 };
     return result;

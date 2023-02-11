@@ -24,10 +24,9 @@ DEFINE_STRUCT(ExampleStruct, char *name, NestedStruct *nest, int value)
 STRUCT_END
 
 int main() {
-    SerializableArray array = SerializableArray_create(
-        2,
-        SerializableValue_create(ValueType_Integer, 5),
-        SerializableValue_create(ValueType_Bool, false));
+    JsonArray array = JsonArray(
+        JsonValue(ValueType_Integer, 5),
+        JsonValue(ValueType_Bool, false));
 
     DoubleNest duonest = DoubleNest_create(/*a: */ 7,
                                            /*b: */ "duonest",
@@ -41,17 +40,17 @@ int main() {
                                                  /* nest: */ &nest,
                                                  /*value: */ 5);
 
-    write_to_file("test.json", SerializableObject_to_JSON(&example));
+    write_to_file("test.json", JsonObject_stringify(&example));
 
     char *stringified = read_from_file("test.json");
 
     printf("json:\t%s\n", stringified);
-    SerializableValue result = JSON_to_SerializableValue(stringified);
+    JsonValue result = JSON_to_SerializableValue(stringified);
 
-    printf("result:\t%s\n", SerializableValue_to_JSON(&result));
+    printf("result:\t%s\n", JsonValue_stringify(&result));
 
-    SerializableValue_destroy(&result);
-    SerializableObject_destroy(&example);
+    JsonValue_destroy(&result);
+    JsonObject_destroy(&example);
     free(stringified);
     return EXIT_SUCCESS;
 }
