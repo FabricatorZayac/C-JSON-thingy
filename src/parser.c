@@ -9,6 +9,9 @@
 void Integer_state(char c);
 
 /* It'll be a miracle if this thing works at all */
+/* NOTE it works */
+/* TODO benchmark */
+/* TODO make parser not static, and optimize in general */
 
 enum TokenType { Token_Field, Token_Value, Token_Key, Token_Boundary };
 typedef union {
@@ -30,7 +33,7 @@ enum ParserState {
     Parser_Value,
     Parser_Separator,
     Parser_Boundary,
-    Parser_Keyseeker /*I really don't like that I have to do this*/
+    Parser_Keyseeker,
 };
 typedef struct {
     enum ParserState state;
@@ -71,8 +74,8 @@ void Key_state(char c) {
     if (c == '"' && parser.buffer[parser.buffer_size - 1] != '\\') {
         parser.tokens[parser.tokens_size].token_type = Token_Key;
         parser.tokens[parser.tokens_size++].token =
-            (Token){.key = strncpy(calloc(1, strlen(parser.buffer)),
-                                   parser.buffer, strlen(parser.buffer))};
+            (Token){.key = strncpy(calloc(1, parser.buffer_size),
+                                   parser.buffer, parser.buffer_size)};
 
         parser.buffer_size = 0;
         memset(parser.buffer, 0, BUFSIZ);
@@ -148,10 +151,6 @@ void Boundary_state(char c) {
             result.value.array->array = calloc(array_size, sizeof(SerializableValue));
 
             for (size_t j = 0; j < array_size; i++, j++) {
-                /* if (parser.tokens[i].token_type == Token_Value) */
-                /*     result.value.array->array[j] = (SerializableValue){ */
-                /*         .value_type = parser.tokens[i].token.value.value_type, */
-                /*         .value = parser.tokens[i].token.value.value}; */
                 result.value.array->array[j] = parser.tokens[i + 1].token.value;
             }
             memset(parser.tokens + array_start, 0, sizeof(ParserToken) * array_size);
@@ -176,9 +175,7 @@ void Boundary_state(char c) {
     }
 }
 
-SerializableValue *JSON_to_SerializableValue(char *json) {
-    SerializableValue *result = calloc(1, sizeof(SerializableValue));
-
+SerializableValue JSON_to_SerializableValue(char *json) {
     for (size_t i = 0; i < strlen(json); i++) {
         switch (parser.state) {
         case Parser_Value:
@@ -227,6 +224,8 @@ SerializableValue *JSON_to_SerializableValue(char *json) {
         }
     }
 
-    result = memcpy(result, &parser.tokens[0].token.value, sizeof(SerializableValue));
+    SerializableValue result = parser.tokens[0].token.value;
+    memset(&parser, 0, sizeof(parser));
+    parser = (Parser){ .state = Parser_Value, .buffer_size = 0, .tokens_size = 0 };
     return result;
 }
