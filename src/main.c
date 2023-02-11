@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -29,32 +30,40 @@ int main() {
         JsonValue(ValueType_Integer, 5),
         JsonValue(ValueType_Bool, false));
 
-    DoubleNest duonest = DoubleNest_create(/*a: */ 7,
-                                           /*b: */ "duonest",
-                                           /*c: */ &array);
+    DoubleNest_json duonest = DoubleNest_create(/*a: */ 7,
+                                                /*b: */ "duonest",
+                                                /*c: */ &array);
 
-    NestedStruct nest = NestedStruct_create(/*a: */ true,
-                                            /*b: */ &duonest,
-                                            /*c: */ 4);
+    NestedStruct_json nest = NestedStruct_create(/*a: */ true,
+                                                 /*b: */ &duonest,
+                                                 /*c: */ 4);
 
-    ExampleStruct example = ExampleStruct_create(/* name: */ "test1",
-                                                 /* nest: */ &nest,
-                                                 /*value: */ 5);
+    ExampleStruct_json example = ExampleStruct_create(/* name: */ "test1",
+                                                      /* nest: */ &nest,
+                                                      /*value: */ 5);
 
     write_to_file("test.json", JsonObject_stringify(&example));
 
     char *stringified = read_from_file("test.json");
-
     printf("json:\t%s\n", stringified);
     JsonValue result = JSON_parse(stringified);
-
-    printf("result:\t%s\n", JsonValue_stringify(&result));
-
-    printf("%d\n", example.fields[1].value.body.object->fields[2].value.body.integer);
-
-    JsonValue_destroy(&result);
-    JsonObject_destroy(&example);
+    char *str_result = JsonValue_stringify(&result);
+    printf("result:\t%s\n", str_result);
     free(stringified);
+    free(str_result);
+
+    ExampleStruct *ex = JsonObject_to_struct(&example);
+    assert(ex->nest->c ==
+           example.fields[1].value.body.object->fields[2].value.body.integer);
+    printf("ExampleStruct {\"%s\", %d}\n", ex->name, ex->value);
+
+    // NOTE clean the memory leaking from JsonObject_to_struct
+    free(ex->nest->b);
+    free(ex->nest);
+    free(ex);
+
+    JsonValue_clean(&result);
+    JsonObject_clean(&example);
+
     return EXIT_SUCCESS;
 }
-

@@ -59,7 +59,7 @@ char *JsonObject_stringify(JsonObject *self) {
     return result;
 }
 
-void JsonValue_destroy(JsonValue *value) {
+void JsonValue_clean(JsonValue *value) {
     switch (value->type) {
         case ValueType_Bool:
         case ValueType_Integer:
@@ -69,20 +69,20 @@ void JsonValue_destroy(JsonValue *value) {
             break;
         case ValueType_Array:
             for (size_t i = 0; i < value->body.array->size; i++) {
-                JsonValue_destroy(&value->body.array->body[i]);
+                JsonValue_clean(&value->body.array->body[i]);
             }
             free(value->body.array->body);
             break;
         case ValueType_Object:
             for (size_t i = 0; i < value->body.object->size; i++) {
-                JsonValue_destroy(&value->body.object->fields[i].value);
+                JsonValue_clean(&value->body.object->fields[i].value);
             }
             break;
     }
 }
 
-void JsonObject_destroy(JsonObject *object) {
-    JsonValue_destroy(&(JsonValue) {
+void JsonObject_clean(JsonObject *object) {
+    JsonValue_clean(&(JsonValue) {
         .type = ValueType_Object,
         .body.object = object,
     });
@@ -125,4 +125,30 @@ JsonValue _JsonValue_create(enum ValueType type, ...) {
             break;
     }
     return self;
+}
+
+void *JsonObject_to_struct(JsonObject *object) {
+    void *dest = malloc(BUFSIZ); // NOTE potentially leaks memory
+    for (size_t i = 0; i < object->size; i++) {
+        switch (object->fields[i].value.type) {
+            case ValueType_Bool:
+                *(bool *)(dest + object->offsets[i]) = object->fields[i].value.body.boolean;
+                break;
+            case ValueType_Integer:
+                *(int *)(dest + object->offsets[i]) = object->fields[i].value.body.integer;
+                break;
+            case ValueType_String:
+                /* *(char **)(dest + offsets[i]) = strcpy(calloc(0, sizeof(object.fields[i].value.body.string)), object.fields[i].value.body.string); */
+                *(char **)(dest + object->offsets[i]) = object->fields[i].value.body.string;
+                break;
+            case ValueType_Array:
+                *(JsonArray **)(dest + object->offsets[i]) = object->fields[i].value.body.array;
+                break;
+            case ValueType_Object: {
+                *(void **)(dest + object->offsets[i]) = JsonObject_to_struct(object->fields[i].value.body.object);
+                break;
+            }
+        }
+    }
+    return dest;
 }
