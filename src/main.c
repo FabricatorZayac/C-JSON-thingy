@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 
 #include "file_ops.h"
@@ -45,12 +46,15 @@ int main() {
     char *stringified = read_from_file("test.json");
 
     printf("json:\t%s\n", stringified);
-    JsonValue result = JSON_to_SerializableValue(stringified);
+    JsonValue result = JSON_parse(stringified);
 
     printf("result:\t%s\n", JsonValue_stringify(&result));
+
+    printf("%d\n", example.fields[1].value.body.object->fields[2].value.body.integer);
 
     JsonValue_destroy(&result);
     JsonObject_destroy(&example);
     free(stringified);
     return EXIT_SUCCESS;
 }
+

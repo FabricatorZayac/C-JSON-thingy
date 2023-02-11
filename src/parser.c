@@ -146,10 +146,10 @@ void Boundary_state(char c) {
             JsonValue result =
                 JsonValue(ValueType_Array, calloc(1, sizeof(JsonArray)));
             result.body.array->size = array_size;
-            result.body.array->array = calloc(array_size, sizeof(JsonValue));
+            result.body.array->body = calloc(array_size, sizeof(JsonValue));
 
             for (size_t j = 0; j < array_size; i++, j++) {
-                result.body.array->array[j] = parser.tokens[i + 1].token.value;
+                result.body.array->body[j] = parser.tokens[i + 1].token.value;
             }
             memset(parser.tokens + array_start, 0, sizeof(ParserToken) * array_size);
             parser.tokens_size = array_start;
@@ -173,7 +173,7 @@ void Boundary_state(char c) {
     }
 }
 
-JsonValue JSON_to_SerializableValue(char *json) {
+JsonValue JSON_parse(char *json) {
     for (size_t i = 0; i < strlen(json); i++) {
         switch (parser.state) {
         case Parser_Value:

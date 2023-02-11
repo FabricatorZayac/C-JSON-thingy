@@ -25,7 +25,7 @@ char *JsonValue_stringify(JsonValue *self) {
         sprintf(result, "%c", '[');
         for (size_t i = 0; i < self->body.array->size; i++) {
             sprintf(result + strlen(result), "%s, ",
-                    JsonValue_stringify(&self->body.array->array[i]));
+                    JsonValue_stringify(&self->body.array->body[i]));
         }
         sprintf(result + strlen(result) - 2, "%c", ']');
         break;
@@ -69,9 +69,9 @@ void JsonValue_destroy(JsonValue *value) {
             break;
         case ValueType_Array:
             for (size_t i = 0; i < value->body.array->size; i++) {
-                JsonValue_destroy(&value->body.array->array[i]);
+                JsonValue_destroy(&value->body.array->body[i]);
             }
-            free(value->body.array->array);
+            free(value->body.array->body);
             break;
         case ValueType_Object:
             for (size_t i = 0; i < value->body.object->size; i++) {
@@ -88,7 +88,7 @@ void JsonObject_destroy(JsonObject *object) {
     });
 }
 
-JsonArray JsonArray_create(size_t size, ...) {
+JsonArray _JsonArray_create(size_t size, ...) {
     JsonValue *array = malloc(size * sizeof(JsonValue));
 
     va_list args;
@@ -97,10 +97,10 @@ JsonArray JsonArray_create(size_t size, ...) {
         array[i] = va_arg(args, JsonValue);
     }
 
-    return (JsonArray){.size = size, .array = array};
+    return (JsonArray){.size = size, .body = array};
 }
 
-JsonValue JsonValue_create(enum ValueType type, ...) {
+JsonValue _JsonValue_create(enum ValueType type, ...) {
     va_list args;
     va_start(args, type);
 

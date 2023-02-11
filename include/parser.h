@@ -3,6 +3,6 @@
 
 #include "serializable.h"
 
-JsonValue JSON_to_SerializableValue(char *json);
+JsonValue JSON_parse(char *json);
 
 #endif // PARSER_H_
