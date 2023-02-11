@@ -74,7 +74,7 @@ void *JsonObject_to_struct(JsonObject *object);
     } struct_name##_json;                                               \
     struct_name##_json struct_name##_create(__VA_ARGS__) {              \
         struct_name##_json self = {.size = NUM_ARGS(__VA_ARGS__)};      \
-        self.offsets = calloc(NUM_ARGS(__VA_ARGS__), sizeof(size_t));    \
+        self.offsets = calloc(NUM_ARGS(__VA_ARGS__), sizeof(size_t));   \
         size_t i = 0;                                                   \
         typedef struct_name self_type;                                  \
 

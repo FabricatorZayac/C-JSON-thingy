@@ -74,6 +74,7 @@ void JsonValue_clean(JsonValue *value) {
             free(value->body.array->body);
             break;
         case ValueType_Object:
+            free(value->body.object->offsets);
             for (size_t i = 0; i < value->body.object->size; i++) {
                 JsonValue_clean(&value->body.object->fields[i].value);
             }
