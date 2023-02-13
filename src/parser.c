@@ -27,7 +27,7 @@ typedef struct {
 
 enum ParserState {
     Parser_String,
-    Parser_Integer,
+    Parser_Number,
     Parser_Bool,
     Parser_Key,
     Parser_Value,
@@ -64,7 +64,7 @@ void Value_state(char c) {
         break;
     default:
         if (isdigit(c) || c == '-') {
-            parser.state = Parser_Integer;
+            parser.state = Parser_Number;
         }
         break;
     }
@@ -145,11 +145,11 @@ void Boundary_state(char c) {
 
             JsonValue result =
                 JsonValue(ValueType_Array, calloc(1, sizeof(JsonArray)));
-            result.body.array->size = array_size;
-            result.body.array->body = calloc(array_size, sizeof(JsonValue));
+            result.body.array.size = array_size;
+            result.body.array.body = calloc(array_size, sizeof(JsonValue));
 
             for (size_t j = 0; j < array_size; i++, j++) {
-                result.body.array->body[j] = parser.tokens[i + 1].token.value;
+                result.body.array.body[j] = parser.tokens[i + 1].token.value;
             }
             memset(parser.tokens + array_start, 0, sizeof(ParserToken) * array_size);
             parser.tokens_size = array_start;
@@ -178,7 +178,7 @@ JsonValue JSON_parse(char *json) {
         switch (parser.state) {
         case Parser_Value:
             Value_state(json[i]);
-            if (parser.state == Parser_Integer || parser.state == Parser_Bool)
+            if (parser.state == Parser_Number || parser.state == Parser_Bool)
                 i--;
             break;
         case Parser_String:
@@ -193,11 +193,11 @@ JsonValue JSON_parse(char *json) {
         case Parser_Boundary:
             Boundary_state(json[i]);
             break;
-        case Parser_Integer:
+        case Parser_Number:
             /* Integer_state(json[i]); */
             parser.tokens[parser.tokens_size++] = (ParserToken){
                 .token_type = Token_Value,
-                .token.value = JsonValue(ValueType_Integer, atoi(json + i))};
+                .token.value = JsonValue(ValueType_Number, atoi(json + i))};
             parser.state = Parser_Boundary;
             break;
         case Parser_Bool:
